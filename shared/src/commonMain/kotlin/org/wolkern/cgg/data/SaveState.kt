@@ -1,4 +1,4 @@
-package org.wolkern.cgg
+package org.wolkern.cgg.data
 
 import kotlinx.serialization.Serializable
 import org.wolkern.cgg.domain.ChaosCharacter

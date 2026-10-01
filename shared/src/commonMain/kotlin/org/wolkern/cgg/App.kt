@@ -6,8 +6,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.serialization.json.Json
+import org.wolkern.cgg.data.SAVE_KEY
+import org.wolkern.cgg.data.SaveState
 import org.wolkern.cgg.logic.EyeOfTheGodsRules
 import org.wolkern.cgg.ui.screens.CharacterSetupScreen
+import org.wolkern.cgg.ui.screens.DashboardScreen
+import org.wolkern.cgg.ui.screens.GameMonitoringScreen
 import org.wolkern.cgg.ui.theme.*
 
 @Composable
@@ -103,12 +107,11 @@ fun App(storage: KeyValueStorage) {
                     )
                 }
                 "MONITORING" -> {
-                    val livingIndices = characterList.indices.filter { it !in deadCharactersIndices }
-                    val allLivingHaveRolled = livingIndices.isNotEmpty() && livingIndices.all { currentTurnRolls.containsKey(it) }
-
                     GameMonitoringScreen(
-                        characters = characterList, currentTurn = currentTurn, deadIndices = deadCharactersIndices, isNextTurnEnabled = allLivingHaveRolled,
-                        onSelectCharacter = { index -> selectedCharIndex = index; currentScreen = "DASHBOARD"; triggerSave("DASHBOARD") },
+                        characters = characterList, currentTurn = currentTurn, deadIndices = deadCharactersIndices,
+                        onSelectCharacter = { index ->
+                            selectedCharIndex = index; currentScreen = "DASHBOARD"; triggerSave("DASHBOARD")
+                        },
                         onNextTurnManual = {
                             val cleanedList = characterList.map { char -> char.copy().apply { tempE = 0; tempI = 0 } }
                             characterList = cleanedList
@@ -120,7 +123,10 @@ fun App(storage: KeyValueStorage) {
                 }
                 "DASHBOARD" -> {
                     DashboardScreen(
-                        character = characterList[selectedCharIndex], currentTurn = currentTurn, selectedRoll = currentTurnRolls[selectedCharIndex], isDead = deadCharactersIndices.contains(selectedCharIndex),
+                        character = characterList[selectedCharIndex],
+                        currentTurn = currentTurn,
+                        selectedRoll = currentTurnRolls[selectedCharIndex],
+                        isDead = deadCharactersIndices.contains(selectedCharIndex),
                         onRollSelected = { roll ->
                             val baseCharacterClean = characterListAtStartOfTurn[selectedCharIndex].copy()
                             val message = EyeOfTheGodsRules.applyRoll(baseCharacterClean, roll)
@@ -147,7 +153,9 @@ fun App(storage: KeyValueStorage) {
                             }
                             triggerSave("DASHBOARD")
                         },
-                        onBackToMonitoring = { currentScreen = "MONITORING"; selectedCharIndex = -1; triggerSave("MONITORING") }
+                        onBackToMonitoring = {
+                            currentScreen = "MONITORING"; selectedCharIndex = -1; triggerSave("MONITORING")
+                        }
                     )
                 }
             }

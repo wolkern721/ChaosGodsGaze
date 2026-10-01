@@ -1,4 +1,4 @@
-package org.wolkern.cgg
+package org.wolkern.cgg.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

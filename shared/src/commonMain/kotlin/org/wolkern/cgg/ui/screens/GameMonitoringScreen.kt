@@ -1,4 +1,4 @@
-package org.wolkern.cgg
+package org.wolkern.cgg.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,9 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.wolkern.cgg.ui.components.MonitoringStatLabel
 import org.wolkern.cgg.domain.ChaosCharacter
 import org.wolkern.cgg.ui.theme.*
 
@@ -25,7 +25,6 @@ fun GameMonitoringScreen(
     characters: List<ChaosCharacter>,
     currentTurn: Int,
     deadIndices: Set<Int>,
-    isNextTurnEnabled: Boolean,
     onSelectCharacter: (Int) -> Unit,
     onNextTurnManual: () -> Unit,
     onQuitGame: () -> Unit
@@ -94,14 +93,10 @@ fun GameMonitoringScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        if (!isNextTurnEnabled) {
-            Text(text = "⚠️ En attente des lancers de dés de tous les champions actifs.", color = Color(0xFFE57373), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp).fillMaxWidth(), textAlign = TextAlign.Center)
-        }
-
         Button(
-            onClick = onNextTurnManual, enabled = isNextTurnEnabled,
-            colors = ButtonDefaults.buttonColors(containerColor = TzeentchGold, disabledContainerColor = Color(0xFF2C2C35)),
+            onClick = onNextTurnManual,
+            colors = ButtonDefaults.buttonColors(containerColor = TzeentchGold),
             modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).height(55.dp), shape = RoundedCornerShape(8.dp)
-        ) { Text(text = "PASSER AU TOUR SUIVANT ›", color = if (isNextTurnEnabled) Color.Black else TextDark, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        ) { Text(text = "PASSER AU TOUR SUIVANT ›", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
     }
 }
