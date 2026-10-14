@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.wolkern.cgg.ui.components.MonitoringStatLabel
+import org.wolkern.cgg.ui.components.SettingsButton
 import org.wolkern.cgg.domain.ChaosCharacter
 import org.wolkern.cgg.ui.theme.*
 
@@ -25,6 +26,7 @@ fun GameMonitoringScreen(
     characters: List<ChaosCharacter>,
     currentTurn: Int,
     deadIndices: Set<Int>,
+    onOpenSettings: () -> Unit,
     onSelectCharacter: (Int) -> Unit,
     onNextTurnManual: () -> Unit,
     onQuitGame: () -> Unit
@@ -35,7 +37,19 @@ fun GameMonitoringScreen(
                 Text(text = "MONITORING DE LA PARTIE", color = TextDark, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(text = "TOUR EN COURS : $currentTurn", color = TzeentchGold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
-            Text(text = "Quitter", color = KhorneRed, modifier = Modifier.clickable { onQuitGame() }, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                SettingsButton(onClick = onOpenSettings)
+                Text(
+                    text = "Quitter",
+                    color = KhorneRed,
+                    modifier = Modifier.clickable { onQuitGame() }.padding(vertical = 12.dp),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Text(text = "Statut des combattants :", color = TextLight, fontSize = 14.sp, modifier = Modifier.padding(bottom = 12.dp))
@@ -55,8 +69,8 @@ fun GameMonitoringScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(if (isDead) Color(0xFF1A1111) else CardBg, shape = RoundedCornerShape(8.dp))
-                        .border(1.dp, if (isDead) KhorneRed.copy(alpha = 0.5f) else if (char.isStupid) Color(0xFFD32F2F) else Color(0xFF2C2C35), shape = RoundedCornerShape(8.dp))
+                        .background(if (isDead) DeadBackground else CardBg, shape = RoundedCornerShape(8.dp))
+                        .border(1.dp, if (isDead) KhorneRed.copy(alpha = 0.5f) else if (char.isStupid) Color(0xFFD32F2F) else BorderColor, shape = RoundedCornerShape(8.dp))
                         .clickable { onSelectCharacter(index) }
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -70,7 +84,7 @@ fun GameMonitoringScreen(
                                 Text("DÉCÉDÉ", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(KhorneRed).padding(horizontal = 4.dp, vertical = 2.dp))
                             } else if (char.isStupid) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("STUPIDE", color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(Color(0xFF2A0808)).padding(horizontal = 4.dp, vertical = 2.dp))
+                                Text("STUPIDE", color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(StupidBackground).padding(horizontal = 4.dp, vertical = 2.dp))
                             }
                         }
                         Spacer(modifier = Modifier.height(6.dp))

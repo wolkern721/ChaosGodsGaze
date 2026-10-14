@@ -14,10 +14,14 @@ import org.wolkern.cgg.ui.screens.DashboardScreen
 import org.wolkern.cgg.ui.screens.GameMonitoringScreen
 import org.wolkern.cgg.ui.theme.*
 
+private const val THEME_KEY = "chaos_warband_theme"
+
 @Composable
 fun App(storage: KeyValueStorage) {
     var savedStateLoaded by remember { mutableStateOf<SaveState?>(null) }
     var isLoadChecked by remember { mutableStateOf(false) }
+    var isDarkTheme by remember { mutableStateOf(true) }
+    var showSettings by remember { mutableStateOf(false) }
 
     // Un seul chargement au démarrage de l'application
     LaunchedEffect(Unit) {
@@ -28,14 +32,18 @@ fun App(storage: KeyValueStorage) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        } finally {
-            isLoadChecked = true
         }
+        try {
+            isDarkTheme = storage.getString(THEME_KEY) != "light"
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        isLoadChecked = true
     }
 
     // Écran de chargement pendant la lecture du stockage public
     if (!isLoadChecked) {
-        MaterialTheme {
+        AppTheme(darkTheme = isDarkTheme) {
             Surface(modifier = Modifier.fillMaxSize(), color = DarkBg) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = TzeentchGold)
@@ -70,12 +78,13 @@ fun App(storage: KeyValueStorage) {
         }
     }
 
-    MaterialTheme {
+    AppTheme(darkTheme = isDarkTheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = DarkBg) {
             when (currentScreen) {
                 "SETUP" -> {
                     CharacterSetupScreen(
                         characters = characterList, isGameActive = isGameActive,
+                        onOpenSettings = { showSettings = true },
                         onResumeGame = { currentScreen = "MONITORING"; triggerSave("MONITORING") },
                         onCharacterCreated = { newChar -> characterList = characterList + newChar; triggerSave("SETUP") },
                         onCharacterUpdated = { index, updatedChar ->
@@ -109,6 +118,7 @@ fun App(storage: KeyValueStorage) {
                 "MONITORING" -> {
                     GameMonitoringScreen(
                         characters = characterList, currentTurn = currentTurn, deadIndices = deadCharactersIndices,
+                        onOpenSettings = { showSettings = true },
                         onSelectCharacter = { index ->
                             selectedCharIndex = index; currentScreen = "DASHBOARD"; triggerSave("DASHBOARD")
                         },
@@ -127,6 +137,7 @@ fun App(storage: KeyValueStorage) {
                         currentTurn = currentTurn,
                         selectedRoll = currentTurnRolls[selectedCharIndex],
                         isDead = deadCharactersIndices.contains(selectedCharIndex),
+                        onOpenSettings = { showSettings = true },
                         onRollSelected = { roll ->
                             val baseCharacterClean = characterListAtStartOfTurn[selectedCharIndex].copy()
                             val message = EyeOfTheGodsRules.applyRoll(baseCharacterClean, roll)
@@ -159,6 +170,34 @@ fun App(storage: KeyValueStorage) {
                     )
                 }
             }
+        }
+
+        if (showSettings) {
+            AlertDialog(
+                onDismissRequest = { showSettings = false },
+                title = { Text("Paramètres") },
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(if (isDarkTheme) "Mode nuit" else "Mode jour")
+                        Switch(
+                            checked = isDarkTheme,
+                            onCheckedChange = { darkTheme ->
+                                storage.saveString(THEME_KEY, if (darkTheme) "dark" else "light")
+                                isDarkTheme = darkTheme
+                            }
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSettings = false }) {
+                        Text("Fermer")
+                    }
+                }
+            )
         }
     }
 }

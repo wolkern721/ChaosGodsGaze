@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.wolkern.cgg.ui.components.StatCell
+import org.wolkern.cgg.ui.components.SettingsButton
 import org.wolkern.cgg.domain.ChaosCharacter
 import org.wolkern.cgg.ui.theme.*
 
@@ -29,6 +30,7 @@ fun DashboardScreen(
     onRollSelected: (Int) -> String,
     onResetCharacter: () -> Unit,
     onToggleDeath: () -> Unit,
+    onOpenSettings: () -> Unit,
     onBackToMonitoring: () -> Unit
 ) {
     var gameLog by remember {
@@ -40,9 +42,14 @@ fun DashboardScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(vertical = 12.dp)) {
-            Text(text = "‹ Sauvegarder & Retour", color = TzeentchGold, modifier = Modifier.clickable { onBackToMonitoring() }.align(Alignment.CenterStart), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(text = "TOUR $currentTurn", color = TextDark, modifier = Modifier.align(Alignment.CenterEnd), fontSize = 16.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "‹ Retour", color = TzeentchGold, modifier = Modifier.clickable { onBackToMonitoring() }, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(text = "TOUR $currentTurn", color = TextDark, fontSize = 16.sp)
+            SettingsButton(onClick = onOpenSettings)
         }
 
         Text(text = character.name.uppercase(), color = if (isDead) TextDark else TextLight, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
@@ -70,7 +77,7 @@ fun DashboardScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        Box(modifier = Modifier.fillMaxWidth().background(CardBg, shape = RoundedCornerShape(8.dp)).border(1.dp, Color(0xFF2C2C35), shape = RoundedCornerShape(8.dp)).padding(16.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().background(CardBg, shape = RoundedCornerShape(8.dp)).border(1.dp, BorderColor, shape = RoundedCornerShape(8.dp)).padding(16.dp)) {
             Text(text = gameLog, color = TextLight, fontSize = 16.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
 
@@ -95,17 +102,17 @@ fun DashboardScreen(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { onToggleDeath(); gameLog = if (!isDead) "Le champion a succombé." else "Le champion est ressuscité." },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isDead) Color(0xFF2E7D32) else KhorneRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isDead) BonusGreen else KhorneRed),
                     modifier = Modifier.weight(1.2f).height(50.dp), shape = RoundedCornerShape(8.dp)
                 ) { Text(if (isDead) "RESSUSCITER" else "TUER LE HÉROS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
 
                 if (!isDead) {
-                    Button(onClick = { onResetCharacter(); gameLog = "Jet annulé pour ce tour." }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF23232A)), modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(8.dp)) {
-                        Text("ANNULER", color = Color.White, fontSize = 11.sp)
+                    Button(onClick = { onResetCharacter(); gameLog = "Jet annulé pour ce tour." }, colors = ButtonDefaults.buttonColors(containerColor = MutedSurface), modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(8.dp)) {
+                        Text("ANNULER", color = TextLight, fontSize = 11.sp)
                     }
                 }
-                Button(onClick = onBackToMonitoring, colors = ButtonDefaults.buttonColors(containerColor = if (isDead) Color(0xFF23232A) else KhorneRed), modifier = Modifier.weight(1.2f).height(50.dp), shape = RoundedCornerShape(8.dp)) {
-                    Text("VALIDER", color = Color.White, fontWeight = FontWeight.Bold)
+                Button(onClick = onBackToMonitoring, colors = ButtonDefaults.buttonColors(containerColor = if (isDead) MutedSurface else KhorneRed), modifier = Modifier.weight(1.2f).height(50.dp), shape = RoundedCornerShape(8.dp)) {
+                    Text("VALIDER", color = if (isDead) TextLight else Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }

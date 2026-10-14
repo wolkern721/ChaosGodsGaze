@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +43,7 @@ fun RowScope.StatCell(label: String, currentValue: Int, baseValue: Int, isDead: 
         modifier = Modifier
             .weight(1f)
             .background(CardBg, shape = RoundedCornerShape(6.dp))
-            .border(1.dp, if (isModified) textColor.copy(alpha = 0.5f) else Color(0xFF23232A), shape = RoundedCornerShape(6.dp))
+            .border(1.dp, if (isModified) textColor.copy(alpha = 0.5f) else BorderColor, shape = RoundedCornerShape(6.dp))
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

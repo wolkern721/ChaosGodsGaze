@@ -19,18 +19,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.wolkern.cgg.ui.theme.BonusGreen
-import org.wolkern.cgg.ui.theme.CardBg
-import org.wolkern.cgg.ui.theme.KhorneRed
-import org.wolkern.cgg.ui.theme.TextDark
-import org.wolkern.cgg.ui.theme.TextLight
-import org.wolkern.cgg.ui.theme.TzeentchGold
+import org.wolkern.cgg.ui.components.SettingsButton
 import org.wolkern.cgg.domain.ChaosCharacter
+import org.wolkern.cgg.ui.theme.*
 
 @Composable
 fun CharacterSetupScreen(
     characters: List<ChaosCharacter>,
     isGameActive: Boolean,
+    onOpenSettings: () -> Unit,
     onResumeGame: () -> Unit,
     onCharacterCreated: (ChaosCharacter) -> Unit,
     onCharacterUpdated: (Int, ChaosCharacter) -> Unit,
@@ -49,10 +46,10 @@ fun CharacterSetupScreen(
     var showResetDialog by remember { mutableStateOf(false) }
 
     val darkFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = Color.White,
-        unfocusedTextColor = Color.White,
+        focusedTextColor = TextLight,
+        unfocusedTextColor = TextLight,
         focusedBorderColor = TzeentchGold,
-        unfocusedBorderColor = Color(0xFF23232A),
+        unfocusedBorderColor = BorderColor,
         focusedLabelColor = TzeentchGold,
         unfocusedLabelColor = TextDark
     )
@@ -75,21 +72,26 @@ fun CharacterSetupScreen(
             dismissButton = {
                 Button(
                     onClick = { showResetDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF23232A)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MutedSurface),
                     shape = RoundedCornerShape(4.dp)
-                ) { Text("ANNULER", color = Color.White) }
+                ) { Text("ANNULER", color = TextLight) }
             },
             shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.border(1.dp, Color(0xFF2C2C35), shape = RoundedCornerShape(8.dp))
+            modifier = Modifier.border(1.dp, BorderColor, shape = RoundedCornerShape(8.dp))
         )
     }
 
     Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).padding(16.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(text = "Création de la Bande".uppercase(), color = TzeentchGold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            SettingsButton(onClick = onOpenSettings)
         }
 
-        Box(modifier = Modifier.fillMaxWidth().background(CardBg, shape = RoundedCornerShape(8.dp)).border(1.dp, Color(0xFF2C2C35), shape = RoundedCornerShape(8.dp)).padding(16.dp)) {
+        Box(modifier = Modifier.fillMaxWidth().background(CardBg, shape = RoundedCornerShape(8.dp)).border(1.dp, BorderColor, shape = RoundedCornerShape(8.dp)).padding(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = if (editingIndex == -1) "Invoquer un Champion" else "Modifier ${characters[editingIndex].name}", color = TextLight, fontWeight = FontWeight.Bold)
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nom du Champion") }, colors = darkFieldColors, modifier = Modifier.fillMaxWidth())
@@ -109,9 +111,9 @@ fun CharacterSetupScreen(
                     if (editingIndex != -1) {
                         Button(
                             onClick = { editingIndex = -1; name = ""; cc = "6"; f = "4"; e = "4"; i = "5"; a = "3"; cd = "8" },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF23232A)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MutedSurface),
                             modifier = Modifier.weight(1f)
-                        ) { Text("Annuler", color = Color.White) }
+                        ) { Text("Annuler", color = TextLight) }
                     }
 
                     Button(
