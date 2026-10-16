@@ -41,7 +41,7 @@ L'application est une **Progressive Web App (PWA)**. Elle ne nécessite aucun t�
 ### 💻 Sur Desktop (Windows, macOS, Linux — Chrome / Edge / Brave)
 1. Rendez-vous sur l'adresse de l'application depuis votre navigateur de bureau.
 2. Dans la barre d'adresse, cliquez sur l'icône d'installation située à droite (icône d'écran avec une flèche vers le bas ou symbole `+`).
-3. Ou cliquez sur le menu du navigateur (**⋮**) puis **Installer Chaos Gods Gaze...**.
+3. Ou cliquez sur le menu du navigateur (**⋮**) puis **Installer Chaos Gods Gaze…**
 4. L'application est installée comme une application bureau indépendante avec sa propre fenêtre et son raccourci système.
 
 ---

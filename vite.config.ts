@@ -8,16 +8,19 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.png'],
+      includeAssets: ['icons/*.png', 'screenshots/*.png'],
       manifest: {
+        id: 'org.wolkern.cgg',
         name: 'Chaos Gods Gaze',
         short_name: 'CGG',
         description: 'Compagnon de jeu Warhammer pour la règle du Regard des Dieux',
         theme_color: '#F3F0E8',
         background_color: '#F3F0E8',
         display: 'standalone',
+        orientation: 'any',
         scope: './',
         start_url: './',
+        categories: ['games', 'utilities'],
         icons: [
           {
             src: 'icons/72x72-CGG.png',
@@ -66,6 +69,22 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable any'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'screenshots/screenshot-mobile.png',
+            sizes: '512x512',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Monitoring des champions du Chaos'
+          },
+          {
+            src: 'screenshots/screenshot-desktop.png',
+            sizes: '512x512',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Tableau de bord et lancer de dés'
           }
         ]
       },
