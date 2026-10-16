@@ -11,8 +11,8 @@ function deepClone<T>(obj: T): T {
 }
 
 export const useGameStore = defineStore('game', () => {
-  // Theme state
-  const isDarkTheme = ref<boolean>(true)
+  // Theme state : par défaut en mode jour (isDarkTheme = false) au premier démarrage
+  const isDarkTheme = ref<boolean>(false)
   const showSettings = ref<boolean>(false)
 
   // Game state
@@ -47,7 +47,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       const savedTheme = localStorage.getItem(THEME_KEY)
       if (savedTheme !== null) {
-        isDarkTheme.value = savedTheme !== 'light'
+        isDarkTheme.value = savedTheme === 'dark'
       }
 
       const savedJson = localStorage.getItem(SAVE_KEY)
@@ -93,6 +93,7 @@ export const useGameStore = defineStore('game', () => {
     isDarkTheme.value = dark
     try {
       localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
     } catch (e) {
       console.error(e)
     }
