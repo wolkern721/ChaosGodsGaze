@@ -10,6 +10,7 @@
       <div class="modal-card">
         <h3 class="modal-title">Paramètres</h3>
 
+        <!-- Theme toggle -->
         <div class="setting-item">
           <span>{{ store.isDarkTheme ? 'Mode nuit' : 'Mode jour' }}</span>
           <label class="switch">
@@ -17,6 +18,22 @@
               type="checkbox"
               :checked="store.isDarkTheme"
               @change="(e) => store.toggleTheme((e.target as HTMLInputElement).checked)"
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Keep screen awake toggle -->
+        <div class="setting-item">
+          <div class="setting-text">
+            <span>Garder l'écran allumé</span>
+            <small class="setting-desc">Empêche la mise en veille pendant la partie</small>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              :checked="store.keepScreenAwake"
+              @change="(e) => void store.toggleKeepScreenAwake((e.target as HTMLInputElement).checked)"
             />
             <span class="slider"></span>
           </label>
@@ -31,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
 import CharacterSetupView from './views/CharacterSetupView.vue'
 import GameMonitoringView from './views/GameMonitoringView.vue'
@@ -39,9 +56,21 @@ import DashboardView from './views/DashboardView.vue'
 
 const store = useGameStore()
 
-onMounted(() => {
-  store.loadState()
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible' && store.keepScreenAwake) {
+    void store.requestWakeLock()
+  }
+}
+
+onMounted(async () => {
+  await store.loadState()
   document.documentElement.setAttribute('data-theme', store.isDarkTheme ? 'dark' : 'light')
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  void store.releaseWakeLock()
 })
 </script>
 
@@ -69,10 +98,11 @@ onMounted(() => {
 .modal-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 20px;
-  max-width: 320px;
+  max-width: 360px;
   width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 .modal-title {
@@ -87,12 +117,26 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   font-size: 15px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.3;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 8px;
 }
 
 .close-btn {
@@ -109,6 +153,7 @@ onMounted(() => {
   display: inline-block;
   width: 48px;
   height: 26px;
+  flex-shrink: 0;
 }
 
 .switch input {

@@ -5,6 +5,7 @@ import { EyeOfTheGodsRules } from '../logic/eyeOfTheGodsRules'
 
 const SAVE_KEY = 'chaos_warband_state'
 const THEME_KEY = 'chaos_warband_theme'
+const WAKE_LOCK_KEY = 'chaos_warband_wakelock'
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
@@ -14,6 +15,10 @@ export const useGameStore = defineStore('game', () => {
   // Theme state : par défaut en mode jour (isDarkTheme = false) au premier démarrage
   const isDarkTheme = ref<boolean>(false)
   const showSettings = ref<boolean>(false)
+
+  // Keep screen awake (Wake Lock)
+  const keepScreenAwake = ref<boolean>(true)
+  let wakeLockSentinel: WakeLockSentinel | null = null
 
   // Game state
   const characterList = ref<ChaosCharacter[]>([])
@@ -42,12 +47,58 @@ export const useGameStore = defineStore('game', () => {
     return deadCharactersIndices.value.includes(selectedCharIndex.value)
   })
 
+  async function requestWakeLock(): Promise<void> {
+    if (!keepScreenAwake.value) return
+    if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen')
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null
+        })
+      } catch (err) {
+        console.warn('Wake Lock could not be acquired:', err)
+      }
+    }
+  }
+
+  async function releaseWakeLock(): Promise<void> {
+    if (wakeLockSentinel !== null) {
+      try {
+        await wakeLockSentinel.release()
+      } catch (err) {
+        console.warn('Error releasing Wake Lock:', err)
+      } finally {
+        wakeLockSentinel = null
+      }
+    }
+  }
+
+  async function toggleKeepScreenAwake(enabled: boolean): Promise<void> {
+    keepScreenAwake.value = enabled
+    try {
+      localStorage.setItem(WAKE_LOCK_KEY, enabled ? 'true' : 'false')
+    } catch (e) {
+      console.error(e)
+    }
+
+    if (enabled) {
+      await requestWakeLock()
+    } else {
+      await releaseWakeLock()
+    }
+  }
+
   // Load state from localStorage
-  function loadState() {
+  async function loadState(): Promise<void> {
     try {
       const savedTheme = localStorage.getItem(THEME_KEY)
       if (savedTheme !== null) {
         isDarkTheme.value = savedTheme === 'dark'
+      }
+
+      const savedWakeLock = localStorage.getItem(WAKE_LOCK_KEY)
+      if (savedWakeLock !== null) {
+        keepScreenAwake.value = savedWakeLock === 'true'
       }
 
       const savedJson = localStorage.getItem(SAVE_KEY)
@@ -64,6 +115,10 @@ export const useGameStore = defineStore('game', () => {
       }
     } catch (e) {
       console.error('Error loading state from localStorage:', e)
+    }
+
+    if (keepScreenAwake.value) {
+      await requestWakeLock()
     }
   }
 
@@ -233,6 +288,7 @@ export const useGameStore = defineStore('game', () => {
   return {
     isDarkTheme,
     showSettings,
+    keepScreenAwake,
     characterList,
     currentScreen,
     currentTurn,
@@ -247,6 +303,9 @@ export const useGameStore = defineStore('game', () => {
     loadState,
     saveState,
     toggleTheme,
+    toggleKeepScreenAwake,
+    requestWakeLock,
+    releaseWakeLock,
     addCharacter,
     updateCharacter,
     deleteCharacter,
