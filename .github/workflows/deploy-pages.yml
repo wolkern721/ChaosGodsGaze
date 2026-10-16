@@ -25,28 +25,24 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+          node-version: 22
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build WebAssembly distribution
-        run: ./gradlew :shared:wasmJsBrowserDistribution
+      - name: Build web application
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: shared/build/dist/wasmJs/productionExecutable
+          path: dist
 
       - name: Deploy to GitHub Pages
         id: deployment

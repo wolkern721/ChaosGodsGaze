@@ -1,0 +1,113 @@
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Dark Theme Colors */
+[data-theme="dark"] {
+  --bg-primary: #0F0F12;
+  --bg-surface: #16161C;
+  --bg-surface-elevated: #1F1F27;
+  --bg-muted: #23232A;
+  --border-color: #2C2C35;
+  --border-subtle: #22222A;
+  --border-hover: #D4AF37;
+  --dead-bg: #1A1111;
+  --stupid-bg: #2A0808;
+  --khorne-red: #8B0000;
+  --khorne-red-hover: #A30D0D;
+  --tzeentch-gold: #D4AF37;
+  --tzeentch-gold-hover: #E5C358;
+  --bonus-green: #4CAF50;
+  --bonus-green-hover: #57BF5B;
+  --malus-red: #E57373;
+  --text-primary: #E0E0E6;
+  --text-secondary: #888894;
+  --dialog-overlay: rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-gold: 0 4px 14px rgba(212, 175, 55, 0.25);
+  --shadow-red: 0 4px 14px rgba(139, 0, 0, 0.35);
+}
+
+/* Light Theme Colors */
+[data-theme="light"] {
+  --bg-primary: #F3F0E8;
+  --bg-surface: #FFFDF7;
+  --bg-surface-elevated: #FAF6ED;
+  --bg-muted: #E7E1D5;
+  --border-color: #D8D0C0;
+  --border-subtle: #E2DBD0;
+  --border-hover: #B58B21;
+  --dead-bg: #EFE3E3;
+  --stupid-bg: #F5E6E2;
+  --khorne-red: #8B0000;
+  --khorne-red-hover: #A30D0D;
+  --tzeentch-gold: #B58B21;
+  --tzeentch-gold-hover: #C99E2A;
+  --bonus-green: #2E7D32;
+  --bonus-green-hover: #388E3C;
+  --malus-red: #B3261E;
+  --text-primary: #29251F;
+  --text-secondary: #68645D;
+  --dialog-overlay: rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-gold: 0 4px 12px rgba(181, 139, 33, 0.2);
+  --shadow-red: 0 4px 12px rgba(139, 0, 0, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-family), sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide native number input spin buttons */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Buttons and generic UI styles */
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, filter 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+  filter: brightness(0.92);
+}
+
+input {
+  font-family: inherit;
+  outline: none;
+}

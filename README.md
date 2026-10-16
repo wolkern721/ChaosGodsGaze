@@ -1,31 +1,40 @@
-This is a Kotlin Multiplatform project targeting Web.
+# Chaos Gods Gaze (CGG)
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
-
-### Running the apps
-
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
-
-- Web app:
-  - Wasm target (faster, modern browsers): `./gradlew :webApp:wasmJsBrowserDevelopmentRun`
-  - JS target (slower, supports older browsers): `./gradlew :webApp:jsBrowserDevelopmentRun`
-
-### Deploying to GitHub Pages
-
-The `Deploy to GitHub Pages` workflow builds the WebAssembly distribution and publishes it whenever changes are pushed to `develop`. It can also be started manually from the Actions tab. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+Compagnon de jeu pour **Warhammer: The Old World / Battle**, facilitant le suivi de la règle du **Regard des Dieux** (*Eye of the Gods*) pour les champions du Chaos.
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+## ⚡ Caractéristiques
+- **Progressive Web App (PWA)** : Installable sur Android, iOS et Desktop, avec mode plein écran natif et support hors-ligne (100% offline).
+- **Stack moderne** : Vue 3, TypeScript, Pinia, Vite & `vite-plugin-pwa`.
+- **Thème Grimdark** : Mode Nuit (Khorne Red, Tzeentch Gold) et Mode Jour avec bascule instantanée.
+- **Suivi en direct** : Gestion du tour par tour, des statistiques Warhammer (CC, F, E, I, A, Cd) et application immédiate des effets du D6.
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+---
+
+## 🚀 Développement Local
+
+### Prérequis
+- [Node.js](https://nodejs.org/) (version 20+)
+- npm
+
+### Commandes
+```bash
+# Installation des dépendances
+npm install
+
+# Démarrer le serveur de développement
+npm run dev
+
+# Compiler pour la production (build PWA)
+npm run build
+
+# Prévisualiser le build de production
+npm run preview
+```
+
+---
+
+## 🌐 Déploiement
+
+Le projet se déploie automatiquement sur **GitHub Pages** lors d'un push sur la branche `develop` via GitHub Actions (`.github/workflows/deploy-pages.yml`).
