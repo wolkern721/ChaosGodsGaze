@@ -1,7 +1,32 @@
 <template>
   <main class="app-root" :data-theme="store.isDarkTheme ? 'dark' : 'light'">
+    <!-- Top Navigation Tabs (Visible when in Warbands or Sessions list) -->
+    <nav v-if="store.currentScreen === 'WARBANDS' || store.currentScreen === 'SESSIONS'" class="top-nav-tabs">
+      <button
+        class="nav-tab"
+        :class="{ active: store.currentScreen === 'WARBANDS' }"
+        @click="store.navigateTo('WARBANDS')"
+      >
+        <span class="tab-icon">🛡️</span>
+        <span class="tab-title">Mes Bandes</span>
+        <span v-if="store.warbands.length > 0" class="tab-badge">{{ store.warbands.length }}</span>
+      </button>
+
+      <button
+        class="nav-tab"
+        :class="{ active: store.currentScreen === 'SESSIONS' }"
+        @click="store.navigateTo('SESSIONS')"
+      >
+        <span class="tab-icon">⚔️</span>
+        <span class="tab-title">Mes Parties</span>
+        <span v-if="store.sessions.length > 0" class="tab-badge active-badge">{{ store.sessions.length }}</span>
+      </button>
+    </nav>
+
     <!-- Screens routing based on currentScreen -->
-    <CharacterSetupView v-if="store.currentScreen === 'SETUP'" />
+    <WarbandsView v-if="store.currentScreen === 'WARBANDS'" />
+    <GameSessionsView v-else-if="store.currentScreen === 'SESSIONS'" />
+    <CharacterSetupView v-else-if="store.currentScreen === 'SETUP'" />
     <GameMonitoringView v-else-if="store.currentScreen === 'MONITORING'" />
     <DashboardView v-else-if="store.currentScreen === 'DASHBOARD'" />
 
@@ -50,6 +75,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './stores/gameStore'
+import WarbandsView from './views/WarbandsView.vue'
+import GameSessionsView from './views/GameSessionsView.vue'
 import CharacterSetupView from './views/CharacterSetupView.vue'
 import GameMonitoringView from './views/GameMonitoringView.vue'
 import DashboardView from './views/DashboardView.vue'
@@ -82,8 +109,79 @@ onUnmounted(() => {
   flex-direction: column;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  overflow: hidden;
 }
 
+/* Top Tab Bar */
+.top-nav-tabs {
+  display: flex;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px 0;
+  padding-top: max(8px, env(safe-area-inset-top));
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 6px 6px 0 0;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface-elevated);
+}
+
+.nav-tab.active {
+  color: var(--tzeentch-gold);
+  border-bottom-color: var(--tzeentch-gold);
+  background-color: var(--bg-surface-elevated);
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-badge {
+  background-color: var(--bg-muted);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.nav-tab.active .tab-badge {
+  background-color: var(--tzeentch-gold);
+  color: #0F0F12;
+}
+
+.tab-badge.active-badge {
+  background-color: var(--khorne-red);
+  color: #fff;
+}
+
+.nav-tab.active .tab-badge.active-badge {
+  background-color: var(--khorne-red);
+  color: #fff;
+  box-shadow: var(--shadow-red);
+}
+
+/* Modal styling */
 .modal-overlay {
   position: fixed;
   inset: 0;

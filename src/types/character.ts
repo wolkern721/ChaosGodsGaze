@@ -1,4 +1,5 @@
 export interface ChaosCharacter {
+  id?: string
   name: string
   // Statistiques de base du profil Warhammer
   baseCC: number
@@ -24,15 +25,44 @@ export interface ChaosCharacter {
   tempE: number
 }
 
-export type ScreenType = 'SETUP' | 'MONITORING' | 'DASHBOARD'
+export interface Warband {
+  id: string
+  name: string
+  createdAt: number
+  characters: ChaosCharacter[]
+}
 
-export interface SaveState {
-  characterList: ChaosCharacter[]
-  currentScreen: ScreenType
+export interface GameSession {
+  id: string
+  name: string
+  warbandId: string
+  warbandName: string
+  createdAt: number
+  updatedAt: number
   currentTurn: number
-  selectedCharIndex: number
   currentTurnRolls: Record<number, number>
+  characterList: ChaosCharacter[]
   characterListAtStartOfTurn: ChaosCharacter[]
   deadCharactersIndices: number[]
-  isGameActive: boolean
+  selectedCharIndex: number
+}
+
+export type ScreenType = 'WARBANDS' | 'SETUP' | 'SESSIONS' | 'MONITORING' | 'DASHBOARD'
+
+export interface SaveState {
+  version?: number
+  warbands?: Warband[]
+  sessions?: GameSession[]
+  selectedWarbandId?: string | null
+  activeSessionId?: string | null
+  currentScreen?: ScreenType
+
+  // Legacy fields for backward compatibility
+  characterList?: ChaosCharacter[]
+  currentTurn?: number
+  selectedCharIndex?: number
+  currentTurnRolls?: Record<number, number>
+  characterListAtStartOfTurn?: ChaosCharacter[]
+  deadCharactersIndices?: number[]
+  isGameActive?: boolean
 }

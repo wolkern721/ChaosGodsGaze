@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { ChaosCharacter, ScreenType, SaveState } from '../types/character'
+import type { ChaosCharacter, Warband, GameSession, ScreenType, SaveState } from '../types/character'
 import { EyeOfTheGodsRules } from '../logic/eyeOfTheGodsRules'
 
 const SAVE_KEY = 'chaos_warband_state'
@@ -9,6 +9,61 @@ const WAKE_LOCK_KEY = 'chaos_warband_wakelock'
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
+}
+
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)
+}
+
+function createDefaultWarband(): Warband {
+  return {
+    id: generateId(),
+    name: 'Horde du Chaos',
+    createdAt: Date.now(),
+    characters: [
+      {
+        id: generateId(),
+        name: 'Seigneur du Chaos',
+        baseCC: 6,
+        baseF: 5,
+        baseE: 4,
+        baseI: 5,
+        baseA: 4,
+        baseCd: 9,
+        isStupid: false,
+        permCC: 0,
+        permF: 0,
+        permA: 0,
+        permE: 0,
+        permI: 0,
+        permCd: 0,
+        tempI: 0,
+        tempE: 0
+      },
+      {
+        id: generateId(),
+        name: 'Héros Exalté',
+        baseCC: 5,
+        baseF: 4,
+        baseE: 4,
+        baseI: 4,
+        baseA: 3,
+        baseCd: 8,
+        isStupid: false,
+        permCC: 0,
+        permF: 0,
+        permA: 0,
+        permE: 0,
+        permI: 0,
+        permCd: 0,
+        tempI: 0,
+        tempE: 0
+      }
+    ]
+  }
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -20,33 +75,72 @@ export const useGameStore = defineStore('game', () => {
   const keepScreenAwake = ref<boolean>(true)
   let wakeLockSentinel: WakeLockSentinel | null = null
 
-  // Game state
-  const characterList = ref<ChaosCharacter[]>([])
-  const currentScreen = ref<ScreenType>('SETUP')
-  const currentTurn = ref<number>(1)
-  const selectedCharIndex = ref<number>(-1)
-  const currentTurnRolls = ref<Record<number, number>>({})
-  const characterListAtStartOfTurn = ref<ChaosCharacter[]>([])
-  const deadCharactersIndices = ref<number[]>([])
-  const isGameActive = ref<boolean>(false)
+  // Navigation & State
+  const currentScreen = ref<ScreenType>('WARBANDS')
 
-  // Current selected character
+  // Multi-Warband (Rosters)
+  const warbands = ref<Warband[]>([])
+  const selectedWarbandId = ref<string | null>(null)
+
+  // Multi-Session (Games)
+  const sessions = ref<GameSession[]>([])
+  const activeSessionId = ref<string | null>(null)
+
+  // Computed: currently edited warband
+  const currentWarband = computed<Warband | null>(() => {
+    if (!selectedWarbandId.value) return warbands.value[0] || null
+    return warbands.value.find((w) => w.id === selectedWarbandId.value) || warbands.value[0] || null
+  })
+
+  // Computed: currently active session
+  const activeSession = computed<GameSession | null>(() => {
+    if (!activeSessionId.value) return null
+    return sessions.value.find((s) => s.id === activeSessionId.value) || null
+  })
+
+  // Computed helpers for in-game views (Monitoring & Dashboard)
+  const currentTurn = computed<number>(() => {
+    return activeSession.value ? activeSession.value.currentTurn : 1
+  })
+
+  const characterList = computed<ChaosCharacter[]>(() => {
+    if (activeSession.value) {
+      return activeSession.value.characterList
+    }
+    if (currentWarband.value) {
+      return currentWarband.value.characters
+    }
+    return []
+  })
+
+  const deadCharactersIndices = computed<number[]>(() => {
+    return activeSession.value ? activeSession.value.deadCharactersIndices : []
+  })
+
+  const selectedCharIndex = computed<number>(() => {
+    return activeSession.value ? activeSession.value.selectedCharIndex : -1
+  })
+
   const selectedCharacter = computed<ChaosCharacter | null>(() => {
-    if (selectedCharIndex.value >= 0 && selectedCharIndex.value < characterList.value.length) {
-      return characterList.value[selectedCharIndex.value]
+    if (!activeSession.value) return null
+    const idx = activeSession.value.selectedCharIndex
+    if (idx >= 0 && idx < activeSession.value.characterList.length) {
+      return activeSession.value.characterList[idx]
     }
     return null
   })
 
-  // Selected roll for current character
   const currentSelectedRoll = computed<number | undefined>(() => {
-    return currentTurnRolls.value[selectedCharIndex.value]
+    if (!activeSession.value) return undefined
+    return activeSession.value.currentTurnRolls[activeSession.value.selectedCharIndex]
   })
 
   const isSelectedCharacterDead = computed<boolean>(() => {
-    return deadCharactersIndices.value.includes(selectedCharIndex.value)
+    if (!activeSession.value) return false
+    return activeSession.value.deadCharactersIndices.includes(activeSession.value.selectedCharIndex)
   })
 
+  // Wake Lock functions
   async function requestWakeLock(): Promise<void> {
     if (!keepScreenAwake.value) return
     if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
@@ -88,7 +182,38 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  // Load state from localStorage
+  // Theme function
+  function toggleTheme(dark: boolean) {
+    isDarkTheme.value = dark
+    try {
+      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  // Save state
+  function saveState(screen?: ScreenType) {
+    if (screen) {
+      currentScreen.value = screen
+    }
+    try {
+      const state: SaveState = {
+        version: 2,
+        warbands: warbands.value,
+        sessions: sessions.value,
+        selectedWarbandId: selectedWarbandId.value,
+        activeSessionId: activeSessionId.value,
+        currentScreen: currentScreen.value
+      }
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+    } catch (e) {
+      console.error('Error saving state to localStorage:', e)
+    }
+  }
+
+  // Load state with migration support
   async function loadState(): Promise<void> {
     try {
       const savedTheme = localStorage.getItem(THEME_KEY)
@@ -104,17 +229,73 @@ export const useGameStore = defineStore('game', () => {
       const savedJson = localStorage.getItem(SAVE_KEY)
       if (savedJson) {
         const state: SaveState = JSON.parse(savedJson)
-        characterList.value = state.characterList || []
-        currentScreen.value = state.currentScreen || 'SETUP'
-        currentTurn.value = state.currentTurn || 1
-        selectedCharIndex.value = state.selectedCharIndex ?? -1
-        currentTurnRolls.value = state.currentTurnRolls || {}
-        characterListAtStartOfTurn.value = state.characterListAtStartOfTurn || []
-        deadCharactersIndices.value = state.deadCharactersIndices || []
-        isGameActive.value = state.isGameActive || false
+
+        if (state.version === 2 && Array.isArray(state.warbands)) {
+          warbands.value = state.warbands
+          sessions.value = state.sessions || []
+          selectedWarbandId.value = state.selectedWarbandId || null
+          activeSessionId.value = state.activeSessionId || null
+          currentScreen.value = state.currentScreen || 'WARBANDS'
+        } else {
+          // Backward Compatibility Migration from V1
+          const legacyChars = state.characterList || []
+          const migratedWarband: Warband = {
+            id: generateId(),
+            name: 'Ma Bande du Chaos',
+            createdAt: Date.now(),
+            characters: legacyChars.map((c) => ({
+              ...c,
+              id: generateId(),
+              permCC: 0,
+              permF: 0,
+              permE: 0,
+              permI: 0,
+              permA: 0,
+              permCd: 0,
+              tempE: 0,
+              tempI: 0,
+              isStupid: false
+            }))
+          }
+          warbands.value = legacyChars.length > 0 ? [migratedWarband] : [createDefaultWarband()]
+          selectedWarbandId.value = warbands.value[0].id
+
+          if (state.isGameActive && legacyChars.length > 0) {
+            const migratedSession: GameSession = {
+              id: generateId(),
+              name: 'Partie Migrée',
+              warbandId: migratedWarband.id,
+              warbandName: migratedWarband.name,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              currentTurn: state.currentTurn || 1,
+              currentTurnRolls: state.currentTurnRolls || {},
+              characterList: legacyChars,
+              characterListAtStartOfTurn: state.characterListAtStartOfTurn || deepClone(legacyChars),
+              deadCharactersIndices: state.deadCharactersIndices || [],
+              selectedCharIndex: state.selectedCharIndex ?? -1
+            }
+            sessions.value = [migratedSession]
+            activeSessionId.value = migratedSession.id
+            currentScreen.value = state.currentScreen || 'MONITORING'
+          } else {
+            currentScreen.value = 'WARBANDS'
+          }
+          saveState()
+        }
+      } else {
+        // Initial clean state with default warband
+        warbands.value = [createDefaultWarband()]
+        selectedWarbandId.value = warbands.value[0].id
+        currentScreen.value = 'WARBANDS'
+        saveState()
       }
     } catch (e) {
       console.error('Error loading state from localStorage:', e)
+      if (warbands.value.length === 0) {
+        warbands.value = [createDefaultWarband()]
+        selectedWarbandId.value = warbands.value[0].id
+      }
     }
 
     if (keepScreenAwake.value) {
@@ -122,62 +303,35 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  // Save state to localStorage
-  function saveState(screen?: ScreenType) {
-    if (screen) {
-      currentScreen.value = screen
+  // --- Warband Management ---
+
+  function navigateTo(screen: ScreenType) {
+    currentScreen.value = screen
+    saveState(screen)
+  }
+
+  function createWarband(name: string): string {
+    const trimmed = name.trim() || 'Nouvelle Bande'
+    const newWarband: Warband = {
+      id: generateId(),
+      name: trimmed,
+      createdAt: Date.now(),
+      characters: []
     }
-    try {
-      const state: SaveState = {
-        characterList: characterList.value,
-        currentScreen: currentScreen.value,
-        currentTurn: currentTurn.value,
-        selectedCharIndex: selectedCharIndex.value,
-        currentTurnRolls: currentTurnRolls.value,
-        characterListAtStartOfTurn: characterListAtStartOfTurn.value,
-        deadCharactersIndices: deadCharactersIndices.value,
-        isGameActive: isGameActive.value
-      }
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state))
-    } catch (e) {
-      console.error('Error saving state to localStorage:', e)
-    }
-  }
-
-  function toggleTheme(dark: boolean) {
-    isDarkTheme.value = dark
-    try {
-      localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
-  // Setup Actions
-  function addCharacter(character: ChaosCharacter) {
-    characterList.value = [...characterList.value, character]
+    warbands.value = [newWarband, ...warbands.value]
+    selectedWarbandId.value = newWarband.id
+    currentScreen.value = 'SETUP'
     saveState('SETUP')
+    return newWarband.id
   }
 
-  function updateCharacter(index: number, character: ChaosCharacter) {
-    const list = [...characterList.value]
-    list[index] = character
-    characterList.value = list
-    saveState('SETUP')
-  }
+  function duplicateWarband(warbandId: string): string {
+    const source = warbands.value.find((w) => w.id === warbandId)
+    if (!source) return ''
 
-  function deleteCharacter(index: number) {
-    const list = [...characterList.value]
-    list.splice(index, 1)
-    characterList.value = list
-    saveState('SETUP')
-  }
-
-  function startGame() {
-    if (characterList.value.length === 0) return
-    const resetList = characterList.value.map((char) => ({
-      ...char,
+    const clonedCharacters = deepClone(source.characters).map((c) => ({
+      ...c,
+      id: generateId(),
       permCC: 0,
       permF: 0,
       permE: 0,
@@ -188,132 +342,325 @@ export const useGameStore = defineStore('game', () => {
       tempI: 0,
       isStupid: false
     }))
-    characterList.value = resetList
-    characterListAtStartOfTurn.value = deepClone(resetList)
-    currentTurn.value = 1
-    currentTurnRolls.value = {}
-    deadCharactersIndices.value = []
-    isGameActive.value = true
+
+    const newWarband: Warband = {
+      id: generateId(),
+      name: `${source.name} (Copie)`,
+      createdAt: Date.now(),
+      characters: clonedCharacters
+    }
+
+    const sourceIndex = warbands.value.findIndex((w) => w.id === warbandId)
+    const updated = [...warbands.value]
+    updated.splice(sourceIndex + 1, 0, newWarband)
+    warbands.value = updated
+    saveState()
+    return newWarband.id
+  }
+
+  function deleteWarband(warbandId: string) {
+    warbands.value = warbands.value.filter((w) => w.id !== warbandId)
+    if (selectedWarbandId.value === warbandId) {
+      selectedWarbandId.value = warbands.value[0]?.id || null
+    }
+    saveState()
+  }
+
+  function updateWarbandName(warbandId: string, newName: string) {
+    const w = warbands.value.find((item) => item.id === warbandId)
+    if (w) {
+      w.name = newName.trim() || 'Bande sans nom'
+      saveState()
+    }
+  }
+
+  function openWarbandSetup(warbandId: string) {
+    selectedWarbandId.value = warbandId
+    currentScreen.value = 'SETUP'
+    saveState('SETUP')
+  }
+
+  // --- Character Edition inside current Warband ---
+
+  function addCharacter(character: ChaosCharacter) {
+    const warband = currentWarband.value
+    if (!warband) return
+    const newChar: ChaosCharacter = {
+      ...character,
+      id: generateId(),
+      permCC: 0,
+      permF: 0,
+      permE: 0,
+      permI: 0,
+      permA: 0,
+      permCd: 0,
+      tempE: 0,
+      tempI: 0,
+      isStupid: false
+    }
+    warband.characters.push(newChar)
+    saveState('SETUP')
+  }
+
+  function updateCharacter(index: number, character: ChaosCharacter) {
+    const warband = currentWarband.value
+    if (!warband || index < 0 || index >= warband.characters.length) return
+    warband.characters[index] = {
+      ...character,
+      id: warband.characters[index].id || generateId()
+    }
+    saveState('SETUP')
+  }
+
+  function deleteCharacter(index: number) {
+    const warband = currentWarband.value
+    if (!warband || index < 0 || index >= warband.characters.length) return
+    warband.characters.splice(index, 1)
+    saveState('SETUP')
+  }
+
+  // --- Game Session Management ---
+
+  function startNewGameFromWarband(warbandId: string, sessionName?: string) {
+    const warband = warbands.value.find((w) => w.id === warbandId)
+    if (!warband || warband.characters.length === 0) return
+
+    const initialChars: ChaosCharacter[] = deepClone(warband.characters).map((c) => ({
+      ...c,
+      permCC: 0,
+      permF: 0,
+      permE: 0,
+      permI: 0,
+      permA: 0,
+      permCd: 0,
+      tempE: 0,
+      tempI: 0,
+      isStupid: false
+    }))
+
+    const defaultName = `${warband.name} - Bataille ${sessions.value.length + 1}`
+    const newSession: GameSession = {
+      id: generateId(),
+      name: sessionName?.trim() || defaultName,
+      warbandId: warband.id,
+      warbandName: warband.name,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      currentTurn: 1,
+      currentTurnRolls: {},
+      characterList: initialChars,
+      characterListAtStartOfTurn: deepClone(initialChars),
+      deadCharactersIndices: [],
+      selectedCharIndex: -1
+    }
+
+    sessions.value = [newSession, ...sessions.value]
+    activeSessionId.value = newSession.id
     currentScreen.value = 'MONITORING'
     saveState('MONITORING')
   }
 
-  function resumeGame() {
+  function resumeSession(sessionId: string) {
+    const s = sessions.value.find((item) => item.id === sessionId)
+    if (!s) return
+    activeSessionId.value = s.id
     currentScreen.value = 'MONITORING'
     saveState('MONITORING')
   }
 
-  // Monitoring Actions
+  function restartSession(sessionId: string) {
+    const s = sessions.value.find((item) => item.id === sessionId)
+    if (!s) return
+    const warband = warbands.value.find((w) => w.id === s.warbandId)
+    const baseSource = warband ? warband.characters : s.characterList
+
+    const resetChars: ChaosCharacter[] = deepClone(baseSource).map((c) => ({
+      ...c,
+      permCC: 0,
+      permF: 0,
+      permE: 0,
+      permI: 0,
+      permA: 0,
+      permCd: 0,
+      tempE: 0,
+      tempI: 0,
+      isStupid: false
+    }))
+
+    s.currentTurn = 1
+    s.currentTurnRolls = {}
+    s.characterList = resetChars
+    s.characterListAtStartOfTurn = deepClone(resetChars)
+    s.deadCharactersIndices = []
+    s.selectedCharIndex = -1
+    s.updatedAt = Date.now()
+
+    activeSessionId.value = s.id
+    currentScreen.value = 'MONITORING'
+    saveState('MONITORING')
+  }
+
+  function deleteSession(sessionId: string) {
+    sessions.value = sessions.value.filter((s) => s.id !== sessionId)
+    if (activeSessionId.value === sessionId) {
+      activeSessionId.value = null
+    }
+    saveState()
+  }
+
+  function quitSessionToSessionsList() {
+    if (activeSession.value) {
+      activeSession.value.selectedCharIndex = -1
+    }
+    currentScreen.value = 'SESSIONS'
+    saveState('SESSIONS')
+  }
+
+  // --- Monitoring & Dashboard Actions (Inside active session) ---
+
   function selectCharacter(index: number) {
-    selectedCharIndex.value = index
+    if (!activeSession.value) return
+    activeSession.value.selectedCharIndex = index
     currentScreen.value = 'DASHBOARD'
     saveState('DASHBOARD')
   }
 
   function nextTurn() {
-    const cleanedList = characterList.value.map((char) => ({
+    if (!activeSession.value) return
+    const cleanedList = activeSession.value.characterList.map((char) => ({
       ...char,
       tempE: 0,
       tempI: 0
     }))
-    characterList.value = cleanedList
-    characterListAtStartOfTurn.value = deepClone(cleanedList)
-    currentTurnRolls.value = {}
-    currentTurn.value += 1
+    activeSession.value.characterList = cleanedList
+    activeSession.value.characterListAtStartOfTurn = deepClone(cleanedList)
+    activeSession.value.currentTurnRolls = {}
+    activeSession.value.currentTurn += 1
+    activeSession.value.updatedAt = Date.now()
     saveState('MONITORING')
   }
 
-  function quitGame() {
-    currentScreen.value = 'SETUP'
-    saveState('SETUP')
-  }
-
-  // Dashboard Actions
   function applyRoll(roll: number): string {
-    const idx = selectedCharIndex.value
-    if (idx < 0 || idx >= characterList.value.length) return ''
-    const baseCharacter = deepClone(characterListAtStartOfTurn.value[idx])
+    if (!activeSession.value) return ''
+    const s = activeSession.value
+    const idx = s.selectedCharIndex
+    if (idx < 0 || idx >= s.characterList.length) return ''
+
+    const baseCharacter = deepClone(s.characterListAtStartOfTurn[idx])
     const message = EyeOfTheGodsRules.applyRoll(baseCharacter, roll)
 
-    currentTurnRolls.value = {
-      ...currentTurnRolls.value,
+    s.currentTurnRolls = {
+      ...s.currentTurnRolls,
       [idx]: roll
     }
 
-    const list = [...characterList.value]
+    const list = [...s.characterList]
     list[idx] = baseCharacter
-    characterList.value = list
+    s.characterList = list
+    s.updatedAt = Date.now()
 
     saveState('DASHBOARD')
     return message
   }
 
   function resetCharacterRoll() {
-    const idx = selectedCharIndex.value
-    if (idx < 0) return
+    if (!activeSession.value) return
+    const s = activeSession.value
+    const idx = s.selectedCharIndex
+    if (idx < 0 || idx >= s.characterList.length) return
 
-    const newRolls = { ...currentTurnRolls.value }
+    const newRolls = { ...s.currentTurnRolls }
     delete newRolls[idx]
-    currentTurnRolls.value = newRolls
+    s.currentTurnRolls = newRolls
 
-    const list = [...characterList.value]
-    list[idx] = deepClone(characterListAtStartOfTurn.value[idx])
-    characterList.value = list
+    const list = [...s.characterList]
+    list[idx] = deepClone(s.characterListAtStartOfTurn[idx])
+    s.characterList = list
+    s.updatedAt = Date.now()
 
     saveState('DASHBOARD')
   }
 
   function toggleDeath() {
-    const idx = selectedCharIndex.value
-    if (idx < 0) return
+    if (!activeSession.value) return
+    const s = activeSession.value
+    const idx = s.selectedCharIndex
+    if (idx < 0 || idx >= s.characterList.length) return
 
-    if (deadCharactersIndices.value.includes(idx)) {
-      deadCharactersIndices.value = deadCharactersIndices.value.filter((i) => i !== idx)
+    if (s.deadCharactersIndices.includes(idx)) {
+      s.deadCharactersIndices = s.deadCharactersIndices.filter((i) => i !== idx)
     } else {
-      deadCharactersIndices.value = [...deadCharactersIndices.value, idx]
-      const newRolls = { ...currentTurnRolls.value }
+      s.deadCharactersIndices = [...s.deadCharactersIndices, idx]
+      const newRolls = { ...s.currentTurnRolls }
       delete newRolls[idx]
-      currentTurnRolls.value = newRolls
+      s.currentTurnRolls = newRolls
     }
+    s.updatedAt = Date.now()
 
     saveState('DASHBOARD')
   }
 
   function backToMonitoring() {
+    if (activeSession.value) {
+      activeSession.value.selectedCharIndex = -1
+    }
     currentScreen.value = 'MONITORING'
-    selectedCharIndex.value = -1
     saveState('MONITORING')
   }
 
   return {
+    // Theme & Wakelock
     isDarkTheme,
     showSettings,
     keepScreenAwake,
-    characterList,
-    currentScreen,
-    currentTurn,
-    selectedCharIndex,
-    currentTurnRolls,
-    characterListAtStartOfTurn,
-    deadCharactersIndices,
-    isGameActive,
-    selectedCharacter,
-    currentSelectedRoll,
-    isSelectedCharacterDead,
-    loadState,
-    saveState,
     toggleTheme,
     toggleKeepScreenAwake,
     requestWakeLock,
     releaseWakeLock,
+
+    // Navigation & Store state
+    currentScreen,
+    navigateTo,
+    warbands,
+    selectedWarbandId,
+    currentWarband,
+    sessions,
+    activeSessionId,
+    activeSession,
+
+    // In-game computed
+    currentTurn,
+    characterList,
+    selectedCharIndex,
+    selectedCharacter,
+    currentSelectedRoll,
+    isSelectedCharacterDead,
+    deadCharactersIndices,
+
+    // Persistence
+    loadState,
+    saveState,
+
+    // Warband methods
+    createWarband,
+    duplicateWarband,
+    deleteWarband,
+    updateWarbandName,
+    openWarbandSetup,
     addCharacter,
     updateCharacter,
     deleteCharacter,
-    startGame,
-    resumeGame,
+
+    // Session methods
+    startNewGameFromWarband,
+    resumeSession,
+    restartSession,
+    deleteSession,
+    quitSessionToSessionsList,
+
+    // In-game methods
     selectCharacter,
     nextTurn,
-    quitGame,
     applyRoll,
     resetCharacterRoll,
     toggleDeath,

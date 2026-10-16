@@ -1,15 +1,24 @@
 <template>
-  <div class="screen setup-screen">
-    <!-- Header -->
+  <div v-if="warband" class="screen setup-screen">
+    <!-- Header with Back button -->
     <header class="header">
-      <h1 class="title">CRÉATION DE LA BANDE</h1>
+      <button class="back-btn" @click="store.navigateTo('WARBANDS')">
+        ‹ Mes Bandes
+      </button>
+      <div class="header-titles">
+        <span class="sub-title">CONFIGURATION DU ROSTER</span>
+        <h1 class="warband-editable-name" @click="openRenameModal">
+          {{ warband.name }}
+          <span class="edit-icon" title="Renommer la bande">✏️</span>
+        </h1>
+      </div>
       <SettingsButton @click="store.showSettings = true" />
     </header>
 
     <!-- Create / Edit Form Card -->
     <div class="card form-card">
       <h2 class="form-title">
-        {{ editingIndex === -1 ? 'Invoquer un Champion' : `Modifier ${store.characterList[editingIndex]?.name}` }}
+        {{ editingIndex === -1 ? 'Invoquer un Champion' : `Modifier ${warband.characters[editingIndex]?.name}` }}
       </h2>
 
       <div class="field-group">
@@ -19,6 +28,7 @@
           type="text"
           placeholder="Ex: Seigneur du Chaos"
           class="text-input"
+          @keyup.enter="saveCharacter"
         />
       </div>
 
@@ -39,22 +49,22 @@
         >
           Annuler
         </button>
-        <button class="btn btn-primary" @click="saveCharacter">
-          {{ editingIndex === -1 ? 'Ajouter le Champion' : 'Enregistrer les Modifications' }}
+        <button class="btn btn-primary" :disabled="!name.trim()" @click="saveCharacter">
+          {{ editingIndex === -1 ? 'Ajouter le Champion' : 'Enregistrer' }}
         </button>
       </div>
     </div>
 
     <!-- Character List Header -->
     <div class="list-header">
-      <span>Guerriers prêts :</span>
+      <span>Guerriers dans la bande ({{ warband.characters.length }}) :</span>
     </div>
 
     <!-- Characters List -->
-    <div class="character-list">
+    <div v-if="warband.characters.length > 0" class="character-list">
       <div
-        v-for="(char, index) in store.characterList"
-        :key="index"
+        v-for="(char, index) in warband.characters"
+        :key="char.id || index"
         class="character-card"
       >
         <div class="char-details">
@@ -82,47 +92,88 @@
         </div>
       </div>
     </div>
+    <div v-else class="empty-list-notice">
+      Aucun guerrier n'a encore été invoqué dans cette bande.
+    </div>
 
     <!-- Footer Action Buttons -->
-    <footer v-if="store.characterList.length > 0 && editingIndex === -1" class="footer-actions">
+    <footer v-if="warband.characters.length > 0 && editingIndex === -1" class="footer-actions">
       <button
-        v-if="store.isGameActive"
-        class="btn btn-green"
-        @click="store.resumeGame"
+        class="btn btn-duplicate"
+        @click="duplicateCurrentWarband"
       >
-        REPRENDRE LA PARTIE
+        📋 Dupliquer
       </button>
       <button
-        class="btn btn-khorne"
-        @click="handleStartGameClick"
+        class="btn btn-primary btn-start-game"
+        @click="openStartBattleModal"
       >
-        {{ store.isGameActive ? 'RECOMMENCER' : 'COMMENCER LA PARTIE' }}
+        ⚔️ LANCER UNE PARTIE
       </button>
     </footer>
 
-    <!-- Confirm Reset Dialog -->
-    <div v-if="showResetDialog" class="modal-overlay">
+    <!-- Rename Warband Modal -->
+    <div v-if="showRenameModal" class="modal-overlay" @click.self="showRenameModal = false">
       <div class="modal-card">
-        <h3 class="modal-title">RÉINITIALISER LA PARTIE ?</h3>
-        <p class="modal-text">
-          Attention, guerrier. Cela va effacer la progression actuelle, réinitialiser tous les attributs bonus et ressusciter les morts. Continuer ?
-        </p>
+        <h3 class="modal-title">RENOMMER LA BANDE</h3>
+        <div class="field-group">
+          <label class="field-label">Nom de la bande</label>
+          <input
+            v-model="renamedTitle"
+            type="text"
+            class="text-input"
+            autofocus
+            @keyup.enter="saveRename"
+          />
+        </div>
         <div class="modal-actions">
-          <button class="btn btn-muted" @click="showResetDialog = false">ANNULER</button>
-          <button class="btn btn-khorne" @click="confirmRestart">OUI, RECOMMENCER</button>
+          <button class="btn btn-muted" @click="showRenameModal = false">Annuler</button>
+          <button class="btn btn-primary" :disabled="!renamedTitle.trim()" @click="saveRename">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Battle Modal -->
+    <div v-if="showBattleModal" class="modal-overlay" @click.self="showBattleModal = false">
+      <div class="modal-card">
+        <h3 class="modal-title">LANCER UNE BATAILLE</h3>
+        <p class="modal-text">
+          Une session de jeu indépendante sera créée avec ces {{ warband.characters.length }} guerriers.
+        </p>
+        <div class="field-group">
+          <label class="field-label">Nom de la partie / adversaire</label>
+          <input
+            v-model="battleSessionName"
+            type="text"
+            class="text-input"
+            @keyup.enter="confirmStartBattle"
+          />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-muted" @click="showBattleModal = false">Annuler</button>
+          <button class="btn btn-primary" @click="confirmStartBattle">
+            ⚔️ Commencer
+          </button>
         </div>
       </div>
     </div>
   </div>
+  <div v-else class="screen">
+    <p>Aucune bande sélectionnée.</p>
+    <button class="btn btn-primary" @click="store.navigateTo('WARBANDS')">Retour aux bandes</button>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import SettingsButton from '../components/SettingsButton.vue'
 import StatStepper from '../components/StatStepper.vue'
 
 const store = useGameStore()
+const warband = computed(() => store.currentWarband)
 
 const name = ref('')
 const cc = ref<number>(6)
@@ -133,7 +184,48 @@ const a = ref<number>(3)
 const cd = ref<number>(8)
 
 const editingIndex = ref(-1)
-const showResetDialog = ref(false)
+
+// Rename Warband Modal
+const showRenameModal = ref(false)
+const renamedTitle = ref('')
+
+function openRenameModal() {
+  if (warband.value) {
+    renamedTitle.value = warband.value.name
+    showRenameModal.value = true
+  }
+}
+
+function saveRename() {
+  if (warband.value && renamedTitle.value.trim()) {
+    store.updateWarbandName(warband.value.id, renamedTitle.value.trim())
+    showRenameModal.value = false
+  }
+}
+
+// Start Battle Modal
+const showBattleModal = ref(false)
+const battleSessionName = ref('')
+
+function openStartBattleModal() {
+  if (!warband.value) return
+  battleSessionName.value = `${warband.value.name} - Bataille ${store.sessions.length + 1}`
+  showBattleModal.value = true
+}
+
+function confirmStartBattle() {
+  if (!warband.value) return
+  store.startNewGameFromWarband(warband.value.id, battleSessionName.value)
+  showBattleModal.value = false
+}
+
+function duplicateCurrentWarband() {
+  if (!warband.value) return
+  const newId = store.duplicateWarband(warband.value.id)
+  if (newId) {
+    store.openWarbandSetup(newId)
+  }
+}
 
 function resetForm() {
   editingIndex.value = -1
@@ -147,8 +239,9 @@ function resetForm() {
 }
 
 function startEdit(index: number) {
+  if (!warband.value) return
   editingIndex.value = index
-  const char = store.characterList[index]
+  const char = warband.value.characters[index]
   name.value = char.name
   cc.value = char.baseCC
   f.value = char.baseF
@@ -189,27 +282,14 @@ function saveCharacter() {
 
   if (editingIndex.value === -1) {
     store.addCharacter(character)
-  } else {
+  } else if (warband.value) {
     store.updateCharacter(editingIndex.value, {
-      ...store.characterList[editingIndex.value],
+      ...warband.value.characters[editingIndex.value],
       ...character
     })
   }
 
   resetForm()
-}
-
-function handleStartGameClick() {
-  if (store.isGameActive) {
-    showResetDialog.value = true
-  } else {
-    store.startGame()
-  }
-}
-
-function confirmRestart() {
-  showResetDialog.value = false
-  store.startGame()
 }
 </script>
 
@@ -229,13 +309,47 @@ function confirmRestart() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  gap: 12px;
 }
 
-.title {
+.back-btn {
+  background: transparent;
   color: var(--tzeentch-gold);
-  font-size: 22px;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+.sub-title {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.warband-editable-name {
+  color: var(--tzeentch-gold);
+  font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-icon {
+  font-size: 12px;
+  opacity: 0.7;
 }
 
 .card {
@@ -311,8 +425,13 @@ function confirmRestart() {
   box-shadow: var(--shadow-gold);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--tzeentch-gold-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-muted {
@@ -326,26 +445,19 @@ function confirmRestart() {
   border-color: var(--border-hover);
 }
 
-.btn-khorne {
+.btn-duplicate {
   flex: 1;
-  background-color: var(--khorne-red);
-  color: #fff;
-  box-shadow: var(--shadow-red);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
-.btn-khorne:hover {
-  background-color: var(--khorne-red-hover);
+.btn-duplicate:hover {
+  border-color: var(--tzeentch-gold);
 }
 
-.btn-green {
-  flex: 1;
-  background-color: var(--bonus-green);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(76, 175, 80, 0.3);
-}
-
-.btn-green:hover {
-  background-color: var(--bonus-green-hover);
+.btn-start-game {
+  flex: 2;
 }
 
 .list-header {
@@ -362,6 +474,15 @@ function confirmRestart() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-bottom: 16px;
+}
+
+.empty-list-notice {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
   margin-bottom: 16px;
 }
 
@@ -465,11 +586,12 @@ function confirmRestart() {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 
 .modal-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 10px;
 }
 </style>

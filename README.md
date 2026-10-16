@@ -7,12 +7,14 @@ Compagnon de jeu pour **Warhammer: The Old World / Battle**, facilitant le suivi
 ## ⚡ Caractéristiques
 - **Progressive Web App (PWA)** : Installable sur Android, iOS et Desktop, avec mode plein écran natif et support hors-ligne (100% offline).
 - **Stack moderne** : Vue 3, TypeScript, Pinia, Vite & `vite-plugin-pwa`.
+- **Multi-listes & Multi-parties** : Créez et gérez plusieurs bandes de guerre réutilisables, dupliquez-les en un clic, et lancez/sauvegardez plusieurs batailles indépendantes sans perte de progression.
 - **Thème Grimdark** : Mode Nuit (Khorne Red, Tzeentch Gold) et Mode Jour avec bascule instantanée.
-- **Suivi en direct** : Gestion du tour par tour, des statistiques Warhammer (CC, F, E, I, A, Cd) et application immédiate des effets du D6.
+- **Suivi en direct** : Gestion du tour par tour, des statistiques Warhammer (CC, F, E, I, A, Cd) et application immédiate des effets du D6 (lancer animé ou saisie manuelle).
+- **Anti-veille (Wake Lock)** : Maintient l'écran allumé pendant vos parties de jeu de figurines.
 
 ---
 
-## 📲 Installation de l'application (PWA)
+## 📱 Installation de l'application (PWA)
 
 L'application est une **Progressive Web App (PWA)**. Elle ne nécessite aucun téléchargement via un store applicatif et fonctionne **100% hors-ligne** une fois installée ou visitée une première fois.
 

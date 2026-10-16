@@ -1,30 +1,40 @@
 <template>
-  <div class="screen monitoring-screen">
+  <div v-if="session" class="screen monitoring-screen">
     <!-- Header -->
     <header class="header">
-      <div class="turn-info">
-        <span class="sub-title">MONITORING DE LA PARTIE</span>
-        <h1 class="turn-title">TOUR EN COURS : {{ store.currentTurn }}</h1>
+      <div class="header-top">
+        <button class="back-btn" @click="store.quitSessionToSessionsList">
+          ‹ Mes Parties
+        </button>
+        <div class="header-actions">
+          <SettingsButton @click="store.showSettings = true" />
+          <button class="quit-btn" @click="store.quitSessionToSessionsList">Quitter</button>
+        </div>
       </div>
-      <div class="header-actions">
-        <SettingsButton @click="store.showSettings = true" />
-        <button class="quit-btn" @click="store.quitGame">Quitter</button>
+
+      <div class="turn-info">
+        <div class="session-meta">
+          <span class="session-title">{{ session.name }}</span>
+          <span class="warband-subtitle">🛡️ {{ session.warbandName }}</span>
+        </div>
+        <h1 class="turn-title">TOUR EN COURS : {{ store.currentTurn }}</h1>
       </div>
     </header>
 
     <div class="status-heading">
-      <span>Statut des combattants :</span>
+      <span>Combattants ({{ session.characterList.length - store.deadCharactersIndices.length }} en vie) :</span>
     </div>
 
     <!-- Fighter List -->
     <div class="fighters-list">
       <div
-        v-for="(char, index) in store.characterList"
-        :key="index"
+        v-for="(char, index) in session.characterList"
+        :key="char.id || index"
         class="fighter-row"
         :class="{
           'dead-row': store.deadCharactersIndices.includes(index),
-          'stupid-row': char.isStupid && !store.deadCharactersIndices.includes(index)
+          'stupid-row': char.isStupid && !store.deadCharactersIndices.includes(index),
+          'rolled-row': session.currentTurnRolls[index] !== undefined && !store.deadCharactersIndices.includes(index)
         }"
         @click="store.selectCharacter(index)"
       >
@@ -36,6 +46,9 @@
             </span>
             <span v-else-if="char.isStupid" class="badge badge-stupid">
               STUPIDE
+            </span>
+            <span v-if="session.currentTurnRolls[index] !== undefined && !store.deadCharactersIndices.includes(index)" class="badge badge-roll">
+              🎲 D6 = {{ session.currentTurnRolls[index] }}
             </span>
           </div>
 
@@ -69,14 +82,22 @@
       </button>
     </footer>
   </div>
+  <div v-else class="screen">
+    <p>Aucune session de jeu active.</p>
+    <button class="btn btn-primary" @click="store.navigateTo('SESSIONS')">
+      Retour à la liste des parties
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import SettingsButton from '../components/SettingsButton.vue'
 import MonitoringStatLabel from '../components/MonitoringStatLabel.vue'
 
 const store = useGameStore()
+const session = computed(() => store.activeSession)
 </script>
 
 <style scoped>
@@ -92,9 +113,23 @@ const store = useGameStore()
 
 .header {
   display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.header-top {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+}
+
+.back-btn {
+  background: transparent;
+  color: var(--tzeentch-gold);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 4px 0;
 }
 
 .turn-info {
@@ -102,16 +137,29 @@ const store = useGameStore()
   flex-direction: column;
 }
 
-.sub-title {
+.session-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.session-title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.warband-subtitle {
   color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .turn-title {
   color: var(--tzeentch-gold);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.5px;
 }
@@ -119,24 +167,24 @@ const store = useGameStore()
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .quit-btn {
   background: transparent;
-  color: var(--khorne-red);
-  border: 1px solid rgba(139, 0, 0, 0.4);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   font-size: 13px;
   font-weight: 700;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 6px;
   transition: all 0.15s ease;
 }
 
 .quit-btn:hover {
-  background: var(--khorne-red);
-  color: #fff;
-  border-color: var(--khorne-red);
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .status-heading {
@@ -183,6 +231,10 @@ const store = useGameStore()
   border-color: #D32F2F;
 }
 
+.rolled-row {
+  border-left: 3px solid var(--bonus-green);
+}
+
 .fighter-info {
   flex: 1;
   display: flex;
@@ -193,6 +245,7 @@ const store = useGameStore()
 .fighter-name-line {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -223,6 +276,12 @@ const store = useGameStore()
   background-color: var(--stupid-bg);
   color: #D32F2F;
   border: 1px solid #D32F2F;
+}
+
+.badge-roll {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: var(--bonus-green);
+  border: 1px solid var(--bonus-green);
 }
 
 .stats-line {
